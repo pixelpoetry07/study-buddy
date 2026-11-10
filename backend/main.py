@@ -1,9 +1,10 @@
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+import bcrypt
 
 from database import Base, engine, get_db
-from models import Note
+from models import Note, User
 
 Base.metadata.create_all(bind=engine)
 
@@ -71,3 +72,21 @@ def delete_note(note_id: int, db: Session = Depends(get_db)):
     db.delete(note)
     db.commit()
     return {"deleted": note_id}
+
+
+class UserCreate(BaseModel):
+    email: str
+    password: str
+
+
+@app.post("/signup")
+def signup(data: UserCreate, db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.email == data.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    hashed = bcrypt.hashpw(data.password.encode(), bcrypt.gensalt()).decode()
+    user = User(email=data.email, password_hash=hashed)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return {"id": user.id, "email": user.email}
