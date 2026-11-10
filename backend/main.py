@@ -1,3 +1,5 @@
+import jwt
+from datetime import datetime, timedelta, timezone
 from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -90,3 +92,29 @@ def signup(data: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
     return {"id": user.id, "email": user.email}
+
+
+SECRET_KEY = "dev-secret-change-later"
+
+
+class LoginData(BaseModel):
+    email: str
+    password: str
+
+
+@app.post("/login")
+def login(data: LoginData, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == data.email).first()
+    if user is None or not bcrypt.checkpw(
+        data.password.encode(), user.password_hash.encode()
+    ):
+        raise HTTPException(status_code=401, detail="Wrong email or password")
+    token = jwt.encode(
+        {
+            "sub": str(user.id),
+            "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+        },
+        SECRET_KEY,
+        algorithm="HS256",
+    )
+    return {"access_token": token}
