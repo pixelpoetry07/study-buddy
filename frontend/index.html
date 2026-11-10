@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Study Buddy</title>
-
-    <style>
+  <style>
     body {
       font-family: system-ui, sans-serif;
       max-width: 600px;
@@ -25,7 +24,7 @@
       font-family: inherit;
     }
     button {
-      background: #16a34a;
+      background: #4f46e5;
       color: white;
       border: none;
       padding: 8px 14px;
@@ -43,31 +42,122 @@
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
     li button { margin-left: 6px; margin-top: 8px; }
+    #message { color: #b91c1c; margin-top: 8px; }
+    .hidden { display: none; }
   </style>
-
-
 </head>
 <body>
-  <h1>My Notes</h1>
+  <h1>Study Buddy</h1>
 
-  <input id="title" placeholder="Title"><br>
-  <textarea id="content" placeholder="Content"></textarea><br>
-  <button onclick="addNote()">Add note</button>
+  <!-- Shown when logged out -->
+  <div id="auth-section">
+    <input id="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
+    <button onclick="login()">Log in</button>
+    <button onclick="signup()">Sign up</button>
+    <div id="message"></div>
+  </div>
 
-  <ul id="list"></ul>
+  <!-- Shown when logged in -->
+  <div id="notes-section" class="hidden">
+    <button onclick="logout()">Log out</button>
+    <h2>My Notes</h2>
+    <input id="title" placeholder="Title">
+    <textarea id="content" placeholder="Content"></textarea>
+    <button onclick="addNote()">Add note</button>
+    <ul id="list"></ul>
+  </div>
 
   <script>
     const API = "http://127.0.0.1:8000";
 
+    // ---------- Token helpers ----------
+    function getToken() {
+      return localStorage.getItem("token");
+    }
+
+    function authHeaders() {
+      return {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + getToken(),
+      };
+    }
+
+    // ---------- Show the right section ----------
+    function showApp() {
+      const loggedIn = getToken() !== null;
+      document.getElementById("auth-section").classList.toggle("hidden", loggedIn);
+      document.getElementById("notes-section").classList.toggle("hidden", !loggedIn);
+      if (loggedIn) loadNotes();
+    }
+
+    // ---------- Auth ----------
+    async function signup() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+            if (password.length < 8) {
+        const m = document.getElementById("message");
+        m.style.color = "#b91c1c";
+        m.textContent = "Password must be at least 8 characters.";
+        return;
+      }
+      const res = await fetch(API + "/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const msg = document.getElementById("message");
+      if (res.ok) {
+        msg.style.color = "#15803d";
+        msg.textContent = "Account created. Now click Log in.";
+      } else {
+        const err = await res.json();
+        msg.style.color = "#b91c1c";
+        msg.textContent = err.detail;
+      }
+    }
+
+    async function login() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const res = await fetch(API + "/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const msg = document.getElementById("message");
+      if (res.ok) {
+        const data = await res.json();
+        localStorage.setItem("token", data.access_token);
+        msg.textContent = "";
+        showApp();
+      } else {
+        const err = await res.json();
+        msg.style.color = "#b91c1c";
+        msg.textContent = err.detail;
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem("token");
+      showApp();
+    }
+
+    // ---------- Notes ----------
     async function loadNotes() {
-      const res = await fetch(API + "/notes");
+      const res = await fetch(API + "/notes", { headers: authHeaders() });
+      if (res.status === 401 || res.status === 403) {
+        logout(); // token missing or expired
+        return;
+      }
       const notes = await res.json();
       const list = document.getElementById("list");
       list.innerHTML = "";
       for (const n of notes) {
         const li = document.createElement("li");
         li.textContent = n.title + ": " + n.content + " ";
-                const edit = document.createElement("button");
+
+        const edit = document.createElement("button");
         edit.textContent = "Edit";
         edit.onclick = () => editNote(n);
         li.appendChild(edit);
@@ -76,6 +166,7 @@
         del.textContent = "Delete";
         del.onclick = () => deleteNote(n.id);
         li.appendChild(del);
+
         list.appendChild(li);
       }
     }
@@ -85,17 +176,21 @@
       const content = document.getElementById("content").value;
       await fetch(API + "/notes", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ title, content }),
       });
+      document.getElementById("title").value = "";
+      document.getElementById("content").value = "";
       loadNotes();
     }
 
     async function deleteNote(id) {
-      await fetch(API + "/notes/" + id, { method: "DELETE" });
+      await fetch(API + "/notes/" + id, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
       loadNotes();
     }
-
 
     async function editNote(note) {
       const title = prompt("New title:", note.title);
@@ -104,14 +199,13 @@
       if (content === null) return;
       await fetch(API + "/notes/" + note.id, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ title, content }),
       });
       loadNotes();
     }
 
-
-    loadNotes();
+    showApp();
   </script>
 </body>
 </html>

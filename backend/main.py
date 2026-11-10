@@ -5,8 +5,10 @@ import jwt
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+import os
+from dotenv import load_dotenv
 
 from database import Base, engine, get_db
 from models import Note, User
@@ -22,7 +24,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-SECRET_KEY = "dev-secret-change-later"
+load_dotenv()
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY is missing. Create backend/.env first.")
 bearer = HTTPBearer()
 
 
@@ -35,7 +40,7 @@ class NoteCreate(BaseModel):
 
 class UserCreate(BaseModel):
     email: str
-    password: str
+    password: str = Field(min_length=8)
 
 
 class LoginData(BaseModel):
