@@ -3,6 +3,49 @@
 <head>
   <meta charset="UTF-8">
   <title>Study Buddy</title>
+
+    <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 0 16px;
+      background: #f5f6fa;
+      color: #222;
+    }
+    h1 { text-align: center; }
+    input, textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+      font-family: inherit;
+    }
+    button {
+      background: #16a34a;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover { background: #4338ca; }
+    ul { list-style: none; padding: 0; margin-top: 24px; }
+    li {
+      background: white;
+      padding: 14px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    li button { margin-left: 6px; margin-top: 8px; }
+  </style>
+
+
 </head>
 <body>
   <h1>My Notes</h1>
@@ -67,7 +110,7 @@
       loadNotes();
     }
 
-    
+
     loadNotes();
   </script>
 </body>
