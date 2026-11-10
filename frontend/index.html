@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Study Buddy</title>
+</head>
+<body>
+  <h1>My Notes</h1>
+
+  <input id="title" placeholder="Title"><br>
+  <textarea id="content" placeholder="Content"></textarea><br>
+  <button onclick="addNote()">Add note</button>
+
+  <ul id="list"></ul>
+
+  <script>
+    const API = "http://127.0.0.1:8000";
+
+    async function loadNotes() {
+      const res = await fetch(API + "/notes");
+      const notes = await res.json();
+      const list = document.getElementById("list");
+      list.innerHTML = "";
+      for (const n of notes) {
+        const li = document.createElement("li");
+        li.textContent = n.title + ": " + n.content + " ";
+                const edit = document.createElement("button");
+        edit.textContent = "Edit";
+        edit.onclick = () => editNote(n);
+        li.appendChild(edit);
+
+        const del = document.createElement("button");
+        del.textContent = "Delete";
+        del.onclick = () => deleteNote(n.id);
+        li.appendChild(del);
+        list.appendChild(li);
+      }
+    }
+
+    async function addNote() {
+      const title = document.getElementById("title").value;
+      const content = document.getElementById("content").value;
+      await fetch(API + "/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, content }),
+      });
+      loadNotes();
+    }
+
+    async function deleteNote(id) {
+      await fetch(API + "/notes/" + id, { method: "DELETE" });
+      loadNotes();
+    }
+
+
+    async function editNote(note) {
+      const title = prompt("New title:", note.title);
+      if (title === null) return;
+      const content = prompt("New content:", note.content);
+      if (content === null) return;
+      await fetch(API + "/notes/" + note.id, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, content }),
+      });
+      loadNotes();
+    }
+
+    
+    loadNotes();
+  </script>
+</body>
+</html>
